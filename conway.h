@@ -36,7 +36,7 @@ void choose_simulation();
 uint8 number_bits(COLSTYPE number);
 
 void cell_kill(uint8 row, uint8 col);
-void cell_spawn(uint8 row, uint8 col);
+inline void cell_spawn(uint8 row, uint8 col);
 
 void draw_rle_pattern(int row, int col, const uint8* object);
 enum SEED { LIFE=0x01, BIRD=0x02, BOMB=0x04, MINE=0x08 };

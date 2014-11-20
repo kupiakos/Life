@@ -112,7 +112,8 @@ void choose_simulation()
 			draw_rle_pattern(10, 66, by_flop);          // by_flop
 			break;
 		case MINE:
-			draw_rle_pattern(50, 50, pulsar);
+			draw_rle_pattern(74, 10, glider);
+			draw_rle_pattern(40, 74, glider);
 			break;
 		default:
 			switches = 0;
@@ -121,7 +122,7 @@ void choose_simulation()
 	switches = 0;
 }
 
-void cell_spawn(uint8 row, uint8 col)
+inline void cell_spawn(uint8 row, uint8 col)
 {
 	universe[row][col >> COLSPOW] |= (0x80 >> (col & COLSPOWSEL));
 	draw_alive(row, col);
@@ -131,6 +132,14 @@ void cell_kill(uint8 row, uint8 col)
 {
 	universe[row][col >> COLSPOW] &= ~(0x80 >> (col & COLSPOWSEL));
 	draw_dead(row, col);
+	if (row == 0)
+		lcd_rectangle(col << 1, 0, 2, 1, 1);
+	else if (row == ROWS - 1)
+		lcd_rectangle(col << 1, (ROWS << 1) - 1, 2, 1, 1);
+	if (col == 0)
+		lcd_rectangle(-1, row << 1, 1, 2, 1);
+	else if (col == COLS - 1)
+		lcd_rectangle((COLS << 1) - 1, row << 1, 1, 2, 1);
 }
 
 void init_system()
@@ -149,12 +158,12 @@ void init_system()
 void reset_simulation()
 {
 	WDT_Sec_Cnt = WDT_1SEC_CNT;
-	seconds = 0;
-	generation = 0;
 	memset(universe, 0, sizeof(universe));
 	memset(workingrows, 0, sizeof(workingrows));
 	lcd_clear();
-
+	lcd_rectangle(0, 0, 160, 160, 1);
+	seconds = 0;
+	generation = 0;
 }
 
 uint8 number_bits(uint8 number)
