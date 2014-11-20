@@ -14,6 +14,7 @@
 #include "msp430.h"
 #include "RBX430-1.h"
 #include "RBX430_lcd.h"
+#include "RBX430_i2c.h"
 #include "lifelib.h"
 
 #define ROWS	80
