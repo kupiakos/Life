@@ -37,18 +37,17 @@ void draw_rle_pattern(int row, int col, const uint8* object)
 		switch (c)
 		{
 		case 'b':
-			for (;repeat--;)
-				cell_kill(row, col++);
+			col += repeat;
 			repeat = 1;
 			break;
 		case 'o':
-			for (;repeat--;)
+			while (repeat --> 0)
 				cell_spawn(row, col++);
 			repeat = 1;
 			break;
 		case '$':
 			col = ocol;
-			++row;
+			row += repeat;
 			break;
 		default: // a number
 			repeat = 0;
