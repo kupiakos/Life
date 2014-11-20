@@ -29,6 +29,7 @@ void draw_rle_pattern(int row, int col, const uint8* object)
 		h *= 10;
 		h += c - '0';
 	}
+	row += h - 1; // flip the image vertically
 	// skip to the start
 	object += 15;
 	uint16 repeat = 1;
@@ -47,7 +48,7 @@ void draw_rle_pattern(int row, int col, const uint8* object)
 			break;
 		case '$':
 			col = ocol;
-			row += repeat;
+			row -= repeat;
 			break;
 		default: // a number
 			repeat = 0;
