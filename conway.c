@@ -64,6 +64,63 @@ void draw_rle_pattern(int row, int col, const uint8* object)
 	return;
 }
 
+void choose_simulation()
+{
+	int i;
+	do
+	{
+		while (switches == 0);
+		switch (switches)
+		{
+		case LIFE:
+			draw_rle_pattern(65, 30, gosper_glider_gun);
+			draw_rle_pattern(60, 5, pulsar);
+			draw_rle_pattern(4, 7, beacon_maker);
+			draw_rle_pattern(4, 30, hexapole);
+			draw_rle_pattern(4, 40, hexapole);
+			draw_rle_pattern(4, 50, hexapole);
+			draw_rle_pattern(4, 60, hexapole);
+			draw_rle_pattern(15, 65, loafer);
+			break;
+		case BIRD:
+			draw_rle_pattern(60, 5, pulsar);            // sun
+			draw_rle_pattern(31, 2, bird);              // bird
+			draw_rle_pattern(40, 20, hwss);             // bigger bird
+			draw_rle_pattern(11, 29, glider);           // blows bird apart
+			draw_rle_pattern(65, 65, loafer);
+
+			for (i = 2; i < 78; i += 3)                 // draw ground
+			{
+			   draw_rle_pattern(7, i, block);           // block
+			}
+			break;
+		case BOMB:
+			draw_rle_pattern(65, 10, gosper_glider_gun);
+			draw_rle_pattern(40, 10, lwss);             // LWSS
+
+			draw_rle_pattern(20, 10, pulsar);           // pulsar
+			draw_rle_pattern(20, 35, pulsar);           // pulsar
+			draw_rle_pattern(20, 60, pulsar);           // pulsar
+
+			draw_rle_pattern(10, 10, block);            // block
+			draw_rle_pattern(10, 18, beehive);          // beehive
+			draw_rle_pattern(10, 26, loaf);             // loaf
+			draw_rle_pattern(10, 34, boat);             // boat
+			draw_rle_pattern(10, 42, toad);             // toad
+			draw_rle_pattern(10, 50, beacon);           // beacon
+			draw_rle_pattern(10, 58, blinker);          // blinker
+			draw_rle_pattern(10, 66, by_flop);          // by_flop
+			break;
+		case MINE:
+			draw_rle_pattern(50, 50, pulsar);
+			break;
+		default:
+			switches = 0;
+		}
+	} while (switches == 0);
+	switches = 0;
+}
+
 void cell_spawn(uint8 row, uint8 col)
 {
 	universe[row][col >> COLSPOW] |= (0x80 >> (col & COLSPOWSEL));
@@ -93,7 +150,6 @@ void reset_simulation()
 {
 	WDT_Sec_Cnt = WDT_1SEC_CNT;
 	seconds = 0;
-	switches = 0;
 	generation = 0;
 	memset(universe, 0, sizeof(universe));
 	memset(workingrows, 0, sizeof(workingrows));
@@ -210,15 +266,13 @@ void main(void)
 	while (1)
 	{
 		reset_simulation();
-		draw_rle_pattern(20, 20, gosper_glider_gun2);
+		choose_simulation();
 
 		do
 		{
 			step_simulation();
 			P4OUT ^= 0x40;
 		} while (!display_results(++generation));
-
-
 	}
 }
 

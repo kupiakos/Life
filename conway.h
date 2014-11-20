@@ -32,6 +32,7 @@
 void init_system();
 void reset_simulation();
 void step_simulation();
+void choose_simulation();
 uint8 number_bits(COLSTYPE number);
 
 void cell_kill(uint8 row, uint8 col);
