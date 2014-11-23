@@ -8,9 +8,13 @@
 
 #include "conway.h"
 
-COLSTYPE universe[ROWS][COLSECTS];
-COLSTYPE workingrows[4][COLSECTS];
+uint8 universe[ROWS][10];
+// 9 bits for each map
+// top 6 bits define index
+// bottom 3 bits define where in the map (1 << n)
+uint8 knownstates[(1 << 9) >> 3]; // map for each possible state. 0 = dead, 1 = alive
 int generation;
+sbyte *thisgen, *nextgen; // Actually stored in FRAM.
 
 
 void draw_rle_pattern(int row, int col, const uint8* object)
@@ -124,14 +128,19 @@ void choose_simulation()
 
 inline void cell_spawn(uint8 row, uint8 col)
 {
-	universe[row][col >> COLSPOW] |= (0x80 >> (col & COLSPOWSEL));
+	universe[row][col >> 3] |= (0x80 >> (col & 7));
 	draw_alive(row, col);
 }
 
 void cell_kill(uint8 row, uint8 col)
 {
-	universe[row][col >> COLSPOW] &= ~(0x80 >> (col & COLSPOWSEL));
+	universe[row][col >> 3] &= ~(0x80 >> (col & 7));
 	draw_dead(row, col);
+}
+
+void draw_dead(uint8 row, uint8 col)
+{
+	lcd_point(col << 1, row << 1, 6);
 	if (row == 0)
 		lcd_rectangle(col << 1, 0, 2, 1, 1);
 	else if (row == ROWS - 1)
@@ -153,118 +162,178 @@ void init_system()
 	port1_init();
 	P4DIR |= 0x40;
 	__bis_SR_register(GIE);
+	FRAM_init();
 }
 
 void reset_simulation()
 {
 	WDT_Sec_Cnt = WDT_1SEC_CNT;
-	memset(universe, 0, sizeof(universe));
-	memset(workingrows, 0, sizeof(workingrows));
 	lcd_clear();
 	lcd_rectangle(0, 0, 160, 160, 1);
+}
+
+void gen_map()
+{
+	register int n, c;
+	register uint16 i = 1 << 9;
+	while (i --> 0)
+	{
+		for (n = 0, c = i; c; ++n, c &= c - 1); // count bits
+		if (bitmap_isalive(i))
+		{
+			if (n == 2 || n == 3)
+				bitmap_mapalive(i);
+			else
+				bitmap_mapdead(i);
+		}
+		else
+		{
+			if (n == 3)
+				bitmap_mapalive(i);
+			else
+				bitmap_mapdead(i);
+		}
+	}
+}
+
+void init_simulation()
+{
+	// Write the data in universe to FRAM.
+	register int row = ROWS, colg;
+	register sbyte val;
+	thisgen = GEN1_START;
+	nextgen = GEN2_START;
+
+	while (row --> 0)
+	{
+		int empty = 1;
+		colg = 10;
+		write_mem(thisgen++, row);
+		while (colg --> 0)
+		{
+			register char i, n;
+			if (!(val = universe[row][colg]))
+				continue;
+			empty = 0;
+			for (i=1, n=0; i < 8; ++n, i <<= 1)
+				if (val & i)
+					write_mem(thisgen++, -(((colg + 1) << 3) - n));
+		}
+		if (empty) --thisgen;
+	}
+	write_mem(thisgen, 0);
+	thisgen = GEN1_START;
+
 	seconds = 0;
 	generation = 0;
 }
 
-uint8 number_bits(uint8 number)
-{
-	register int n = 0;
-	while (number)
-	{
-		number &= number - 1;
-		++n;
-	}
-	return n;
-}
-
 void step_simulation()
 {
-	uint8 row, colg, coli;
-	COLSTYPE *prev = workingrows[0],
-			*cur = workingrows[1],
-			*next = workingrows[2],
-			*first = workingrows[3],
-			*tmp;
-	memcpy(cur, universe[ROWS-1], COLSECTS);
-	memcpy(next, universe[0], COLSECTS);
-	memcpy(first, universe[0], COLSECTS);
-	for (row=0; row<ROWS; ++row)
+	sbyte *cur = thisgen, *new = nextgen;
+	sbyte *prev, *next;
+	register sbyte cur_v, prev_v, next_v, new_v;
+	register uint16 bitmap = 0;
+	register sbyte x, y;
+
+	cur_v = read_mem(cur);
+	prev = next = cur;
+	prev_v = next_v = cur_v;
+
+	new_v = 0;
+	write_mem(new, new_v);
+
+	do
 	{
-		tmp = prev;
-		prev = cur;
-		cur = next;
-		next = tmp;
-		if (row == ROWS - 1)
-			next = first;
-		else
-			memcpy(next, universe[row + 1], COLSECTS);
+		// was an x coordinate written?
+		if (new_v < 0)
+			new_v = read_mem(++new);
 
-
-		for (colg=0; colg<COLSECTS; ++colg)
+		if (prev == next)
 		{
-			uint8 nn, alive;
-
-
-			// Cover the left edge
-			alive = cur[colg] & COLSLEFT;
-			nn = number_bits((prev[colg] & COLSLEFT2) |
-							((next[colg] & COLSLEFT2) >> 2) |
-							((cur[colg] & COLS2NDLEFT) >> 3));
-
-
-			nn += number_bits((prev[(colg + COLSECTS - 1) % COLSECTS] & 0x01) |
-							((cur[(colg + COLSECTS - 1) % COLSECTS] & 0x01) << 1) |
-							((next[(colg + COLSECTS - 1) % COLSECTS] & 0x01) << 2));
-
-			if (alive)
+			// start a new row group
+			if (next_v == 0)
 			{
-				if (nn < 2 || nn > 3)
-					cell_kill(row, colg << COLSPOW);
+				write_mem(new, 0);
+				break;
 			}
-			else if (nn == 3)
-				cell_spawn(row, colg << COLSPOW);
-
-			// Handle the middle cases
-			for (coli=1; coli<(COLSSIZE-1); ++coli)
-			{
-				nn = 0;
-				alive = cur[colg] & (COLSLEFT >> coli);
-				nn = number_bits((cur[colg] & ((COLSLEFT >> 1 | COLSLEFT << 1) >> coli))) +
-						number_bits(
-								// (row & (0b11100000 >> (coli-1))) >> (coli-1)
-						((prev[colg] & ((COLSLEFT2 | COLSLEFT >> 2) >> (coli - 1))) << (coli - 1)) |
-						(((next[colg] & ((COLSLEFT2 | COLSLEFT >> 2) >> (coli - 1))) << (coli - 1)) >> 3)
-						);
-
-				if (alive)
-				{
-					if (nn < 2 || nn > 3)
-					{
-						cell_kill(row, coli + (colg << COLSPOW));
-					}
-				}
-				else if (nn == 3)
-					cell_spawn(row, coli + (colg << COLSPOW));
-			}
-
-			// Handle the right edge
-			alive = cur[colg] & 0x01;
-			nn = number_bits((prev[colg] & 3) |
-							((cur[colg] & 2) << 1) |
-							((next[colg] & 3) << 3) |
-							(prev[(colg + 1) % COLSECTS] & COLSLEFT) |
-							((cur[(colg + 1) % COLSECTS] & COLSLEFT) >> 1) |
-							((next[(colg + 1) % COLSECTS] & COLSLEFT) >> 2));
-
-			if (alive)
-			{
-				if (nn < 2 || nn > 3)
-					cell_kill(row, COLSSIZE - 1 + (colg << COLSPOW));
-			}
-			else if (nn == 3)
-				cell_spawn(row, COLSSIZE - 1 + (colg << COLSPOW));
+			y = next_v + 1;
+			next_v = read_mem(++next);
 		}
-	}
+		else
+		{
+			// move to next row and see which to scan
+			if (prev_v == y--)
+				prev_v = read_mem(++prev);
+			if (cur_v == y)
+				cur_v = read_mem(++cur);
+			if (next_v == y - 1)
+				next_v = read_mem(++next);
+		}
+
+		// write the new y coordinate
+		write_mem(new, y);
+		do
+		{
+			x = prev_v;
+			if (x > cur_v)
+				x = cur_v;
+			if (x > next_v)
+				x = next_v;
+
+			// end of the row?
+			if (x >= 0)
+				break;
+
+			do
+			{
+				// add the next column to the bitmap
+				if (prev_v == x)
+				{
+					bitmap |= 0x40;
+					prev_v = read_mem(++prev);
+				}
+				if (cur_v == x)
+				{
+					bitmap |= 0x80;
+					cur_v = read_mem(++cur);
+				}
+				if (next_v == x)
+				{
+					bitmap |= 0x100;
+					next_v = read_mem(++next);
+				}
+
+				if (bitmap_isalive(bitmap))
+				{
+					if (bitmap_fate(bitmap))
+					{
+						write_mem(++new, x - 1);
+						new_v = x - 1;
+					}
+					else
+						draw_dead(y, x);
+				}
+				else if (bitmap_fate(bitmap))
+				{
+					draw_alive(y, x);
+					write_mem(++new, x - 1);
+					new_v = x - 1;
+				}
+				else if (!bitmap)
+					break;
+
+				bitmap >>= 3;
+				++x;
+
+			} while (1);
+		} while (1);
+	} while (1);
+	lcd_cursor(0, 150);
+	lcd_printf("%04d", new - nextgen);
+	next = thisgen;
+	thisgen = nextgen;
+	nextgen = next;
 }
 
 
@@ -276,7 +345,8 @@ void main(void)
 	{
 		reset_simulation();
 		choose_simulation();
-
+		init_simulation();
+		P4OUT ^= 0x40;
 		do
 		{
 			step_simulation();

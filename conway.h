@@ -19,22 +19,19 @@
 
 #define ROWS	80
 #define COLS	80
-#define COLSTYPE	uint8
-#define COLSSIZE	8
-#define COLSPOW 	(COLSSIZE == 8 ? 3 : 4)
-#define COLSECTS	(COLS/COLSSIZE)
-#define COLSLEFT	(1 << (COLSSIZE-1))
-#define COLSLEFT2	(3 << (COLSSIZE-2))
-#define COLS2NDLEFT	(1 << (COLSSIZE-2))
-#define COLSPOWSEL	((1 << (COLSPOW)) - 1)
+#define GEN1_START	(sbyte*)0x0000;
+#define GEN2_START	(sbyte*)0x4000;
+
+#define sbyte signed char
 
 #define waitswitch();	while (switches == 0); switches = 0;
 
 void init_system();
 void reset_simulation();
+void gen_map();
+void init_simulation();
 void step_simulation();
 void choose_simulation();
-uint8 number_bits(COLSTYPE number);
 
 void cell_kill(uint8 row, uint8 col);
 inline void cell_spawn(uint8 row, uint8 col);
@@ -43,8 +40,16 @@ void draw_rle_pattern(int row, int col, const uint8* object);
 enum SEED { LIFE=0x01, BIRD=0x02, BOMB=0x04, MINE=0x08 };
 
 #define draw_alive(y, x) lcd_point(x << 1, y << 1, 7)
-#define draw_dead(y, x) lcd_point(x << 1, y << 1, 6)
+void draw_dead(uint8 row, uint8 col);
+
+#define write_mem(address, datum) FRAM_write((uint16)address, (uint8)datum);
+#define read_mem(address) (int8)FRAM_read((uint16)address);
 
 #define cell_alive(row, col) (universe[row][col >> COLSPOW] & (0x80 >> (col & COLSPOWSEL)))
+
+#define bitmap_isalive(x) (x & 0x10)
+#define bitmap_fate(x) (knownstates[x >> 3] & (1 << (x & 7)))
+#define bitmap_mapalive(i) knownstates[i >> 3] |= (1 << (i & 7))
+#define bitmap_mapdead(i) knownstates[i >> 3] &= ~(1 << (i & 7))
 
 #endif /* CONWAY_H_ */
