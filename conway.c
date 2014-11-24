@@ -11,6 +11,9 @@
 // Each state is as large as I can make it. (Tested by experimentation)
 sbyte state[STATESIZE];
 
+// Used to be highly compressed; 8 states per byte.
+// Expanded to individual 1's and 0's to increase speed.
+
 // 9 bits for each map
 // map for each possible state. 0 = dead, 1 = alive
 const uint8 knownstates[] = {
@@ -108,6 +111,8 @@ void choose_simulation()
 	do
 	{
 		while (switches == 0);
+		lcd_clear();
+		lcd_rectangle(0, 0, 160, 160, 1);
 		switch (switches)
 		{
 		case LIFE:
@@ -150,7 +155,7 @@ void choose_simulation()
 			draw_rle_pattern(10, 66, by_flop);          // by_flop
 			break;
 		case MINE:
-			draw_rle_pattern(50, 50, pulsar);
+			draw_rle_pattern(5, 5, glider);
 			break;
 		default:
 			switches = 0;
@@ -247,6 +252,7 @@ void init_system()
 	port1_init();
 	P4DIR |= 0x40;
 	__bis_SR_register(GIE);
+	switches = 0;
 }
 
 void reset_simulation()
@@ -254,10 +260,11 @@ void reset_simulation()
 	WDT_Sec_Cnt = WDT_1SEC_CNT;
 	lcd_clear();
 	lcd_rectangle(0, 0, 160, 160, 1);
+	lcd_cursor(65, 80);
+	lcd_printf("LIFE");
 	thisgen = state;
 	nextgen = state + GENSEP;
 	*thisgen = 0;
-	switches = 0;
 	memset(state, 0, sizeof(state));
 }
 
