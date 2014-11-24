@@ -345,27 +345,28 @@ void step_simulation()
 					}
 				}
 
-				if (nx <= -COLS);
-				else if (bitmap_isalive(neighbors))
+				if (nx >= -(COLS+1))
 				{
-					if (bitmap_fate(neighbors))
+					if (bitmap_isalive(neighbors))
 					{
+						if (bitmap_fate(neighbors))
+						{
+							ip(new);
+							*new = nx - 1;
+						}
+						else
+							draw_dead(y - 1, -nx); // using next x
+					}
+					else if (bitmap_fate(neighbors))
+					{
+						// can use next x because drawing starts from 0.
+						draw_alive(y - 1, -nx);
 						ip(new);
 						*new = nx - 1;
 					}
-					else
-						draw_dead(y - 1, -nx); // using next x
 				}
-				else if (bitmap_fate(neighbors))
-				{
-					// can use next x because drawing starts from 0.
-					draw_alive(y - 1, -nx);
-					ip(new);
-					*new = nx - 1;
-				}
-				if (!neighbors) // possibly move neighbors check down
+				if (!(neighbors >>= 3))
 					break;
-				neighbors >>= 3;
 			} while (nx++);
 		} while (1);
 	} while (1);
