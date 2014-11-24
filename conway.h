@@ -47,8 +47,6 @@ void draw_dead(register uint8 row, register uint8 col);
 #define cell_alive(row, col) (universe[row][col >> COLSPOW] & (0x80 >> (col & COLSPOWSEL)))
 
 #define bitmap_isalive(x) (x & 0x10)
-#define bitmap_fate(x) (knownstates[x >> 3] & (1 << (x & 7)))
-#define bitmap_mapalive(i) knownstates[i >> 3] |= (1 << (i & 7))
-#define bitmap_mapdead(i) knownstates[i >> 3] &= ~(1 << (i & 7))
+#define bitmap_fate(x) (knownstates[x])
 
 #endif /* CONWAY_H_ */
