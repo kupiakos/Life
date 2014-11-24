@@ -345,7 +345,8 @@ void step_simulation()
 					}
 				}
 
-				if (bitmap_isalive(neighbors))
+				if (nx <= -COLS);
+				else if (bitmap_isalive(neighbors))
 				{
 					if (bitmap_fate(neighbors))
 					{
@@ -362,7 +363,7 @@ void step_simulation()
 					ip(new);
 					*new = nx - 1;
 				}
-				else if (!neighbors) // possibly move neighbors check down
+				if (!neighbors) // possibly move neighbors check down
 					break;
 				neighbors >>= 3;
 			} while (nx++);
