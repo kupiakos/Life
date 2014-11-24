@@ -16,13 +16,15 @@
 #include "RBX430_lcd.h"
 #include "lifelib.h"
 
+#define sbyte signed char
+
 #define ROWS	80
 #define COLS	80
 #define COLSECTS	10
 
-#define sbyte signed char
-
-#define waitswitch();	while (switches == 0); switches = 0;
+#define STATESIZE	880
+#define GENSEP	STATESIZE-(ROWS*3+4)
+#define ip(x) if (++x >= state + sizeof(state)) x -= sizeof(state)
 
 void init_system();
 void reset_simulation();

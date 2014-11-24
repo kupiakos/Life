@@ -9,8 +9,7 @@
 #include "conway.h"
 
 // Each state is as large as I can make it. (Tested by experimentation)
-sbyte state1[440];
-sbyte state2[440];
+sbyte state[STATESIZE];
 
 // 9 bits for each map
 // top 6 bits define index
@@ -233,12 +232,11 @@ void reset_simulation()
 	WDT_Sec_Cnt = WDT_1SEC_CNT;
 	lcd_clear();
 	lcd_rectangle(0, 0, 160, 160, 1);
-	thisgen = state1;
-	nextgen = state2;
+	thisgen = state;
+	nextgen = state + GENSEP;
 	*thisgen = 0;
 	switches = 0;
-	memset(state1, 0, sizeof(state1));
-	memset(state2, 0, sizeof(state2));
+	memset(state, 0, sizeof(state));
 }
 
 void init_simulation()
@@ -265,25 +263,26 @@ void step_simulation()
 	{
 		// was an x coordinate written?
 		if (*new < 0)
-			++new;
+			ip(new);
 
 		if (prev == next)
 		{
 			// start a new row group
 			if (*next == 0)
 				break;
-			y = *next++ + 1;
+			y = *next + 1;
+			ip(next);
 		}
 		else
 		{
 			// move to next row and see which to scan
 			if (*prev == y--)
-				++prev;
+				ip(prev);
 			if (*cur == y)
-				++cur;
+				ip(cur);
 			if (*next == y - 1)
 				if (y - 1)
-					++next;
+					ip(next);
 		}
 
 		// write the new y coordinate
@@ -310,17 +309,17 @@ void step_simulation()
 					if (*next == nx)
 					{
 						neighbors |= 0x100;
-						++next;
+						ip(next);
 					}
 					if (*cur == nx)
 					{
 						neighbors |= 0x80;
-						++cur;
+						ip(cur);
 					}
 					if (*prev == nx)
 					{
 						neighbors |= 0x40;
-						++prev;
+						ip(prev);
 					}
 				}
 
@@ -328,7 +327,8 @@ void step_simulation()
 				{
 					if (bitmap_fate(neighbors))
 					{
-						*++new = nx - 1;
+						ip(new);
+						*new = nx - 1;
 					}
 					else
 						draw_dead(y - 1, -nx); // using next x
@@ -337,7 +337,8 @@ void step_simulation()
 				{
 					// can use next x because drawing starts from 0.
 					draw_alive(y - 1, -nx);
-					*++new = nx - 1;
+					ip(new);
+					*new = nx - 1;
 				}
 				else if (!neighbors) // possibly move neighbors check down
 					break;
@@ -348,9 +349,9 @@ void step_simulation()
 
 	*new = 0; // terminate our list
 
-	next = thisgen;
-	thisgen = nextgen;
-	nextgen = next;
+	next = nextgen;
+	nextgen = state + ((nextgen - state) + GENSEP) % sizeof(state);
+	thisgen = next;
 }
 
 
