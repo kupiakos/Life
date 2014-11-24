@@ -227,7 +227,8 @@ const uint8 boat[] = { "x = 3, y = 3, rule = B3/S23\n2o$obo$bo!" };
 
 // oscillators
 const uint8 blinker[] = { "x = 3, y = 1, rule = B3/S23\n3o!" };
-const uint8 toad[] = { "x = 4, y = 2, rule = B3/S23\nb3o$3o!" };
+// const uint8 toad[] = { "x = 4, y = 2, rule = B3/S23\nb3o$3o!" };
+const uint8 toad[] = { "x = 4, y = 2, rule = B3/S23\n3o$b3o!" };
 const uint8 beacon[] = { "x = 4, y = 4, rule = B3/S23\n2o$o$3bo$2b2o!" };
 
 const uint8 by_flop[] = { "x = 6, y = 7, rule = B3/S23\n"

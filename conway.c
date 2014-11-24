@@ -8,16 +8,29 @@
 
 #include "conway.h"
 
-uint8 universe[ROWS][10];
+// Each state is as large as I can make it. (Tested by experimentation)
+sbyte state1[440];
+sbyte state2[440];
+
 // 9 bits for each map
 // top 6 bits define index
 // bottom 3 bits define where in the map (1 << n)
-uint8 knownstates[(1 << 9) >> 3]; // map for each possible state. 0 = dead, 1 = alive
+// map for each possible state. 0 = dead, 1 = alive
+const uint8 knownstates[(1 << 9) >> 3] = {
+		0x80, 0x68, 0xe8, 0x7e, 0x68, 0x16, 0x7e, 0x17,
+		0x68, 0x16, 0x7e, 0x17, 0x16, 0x01, 0x17, 0x01,
+		0x68, 0x16, 0x7e, 0x17, 0x16, 0x01, 0x17, 0x01,
+		0x16, 0x01, 0x17, 0x01, 0x01, 0x00, 0x01, 0x00,
+		0x68, 0x16, 0x7e, 0x17, 0x16, 0x01, 0x17, 0x01,
+		0x16, 0x01, 0x17, 0x01, 0x01, 0x00, 0x01, 0x00,
+		0x16, 0x01, 0x17, 0x01, 0x01, 0x00, 0x01, 0x00,
+		0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00};
+
 int generation;
-sbyte *thisgen, *nextgen; // Actually stored in FRAM.
+sbyte *thisgen, *nextgen; // Switch between state1 and state2.
 
 
-void draw_rle_pattern(int row, int col, const uint8* object)
+void draw_rle_pattern(register int row, register int col, register const uint8* object)
 {
 	register uint8 c;
 	int w = 0, h = 0, ocol = col;
@@ -36,7 +49,7 @@ void draw_rle_pattern(int row, int col, const uint8* object)
 	row += h - 1; // flip the image vertically
 	// skip to the start
 	object += 15;
-	uint16 repeat = 1;
+	register uint16 repeat = 1;
 	while ((c = *object++) && c != '!')
 	{
 		switch (c)
@@ -116,8 +129,7 @@ void choose_simulation()
 			draw_rle_pattern(10, 66, by_flop);          // by_flop
 			break;
 		case MINE:
-			draw_rle_pattern(74, 10, glider);
-			draw_rle_pattern(40, 74, glider);
+			draw_rle_pattern(50, 50, pulsar);
 			break;
 		default:
 			switches = 0;
@@ -126,19 +138,71 @@ void choose_simulation()
 	switches = 0;
 }
 
-inline void cell_spawn(uint8 row, uint8 col)
+void cell_spawn(register uint8 row, register uint8 col)
 {
-	universe[row][col >> 3] |= (0x80 >> (col & 7));
-	draw_alive(row, col);
+	++row, ++col;
+	register sbyte *p;
+	// Find the correct group
+	for (p = thisgen; *p < 0 || *p > row; ++p);
+	if (*p == row)
+	{
+		register sbyte repl1, repl2;
+
+		while (-(*++p) > col);
+		if (*p == -col)
+			return; // Nothing to do if it already exists.
+		repl1 = -col;
+
+		do
+		{
+			repl2 = *p;
+			*p = repl1;
+			repl1 = repl2;
+		} while (*p++);
+	}
+	else
+	{
+		register sbyte new1, new2, repl1, repl2, *n;
+		int cont = 0;
+		new1 = row;
+		new2 = -col;
+		n = p;
+		do
+		{
+			repl1 = *n++;
+			repl2 = *n++;
+			*p++ = new1;
+			*p++ = new2;
+			cont = new1 && new2;
+			new1 = repl1;
+			new2 = repl2;
+		} while (cont);
+	}
+	draw_alive(row - 1, col - 1);
 }
 
-void cell_kill(uint8 row, uint8 col)
+void cell_kill(register uint8 row, register uint8 col)
 {
-	universe[row][col >> 3] &= ~(0x80 >> (col & 7));
-	draw_dead(row, col);
+	return; // It seems right now that this might be unused.
+	/*
+	register sbyte *p, *c, *n;
+	// Find the correct group
+	for (p = thisgen; *p < 0 || *p > row; ++p);
+	if (*p == row)
+	{
+		while (-(*++p) > col);
+		if (*p == col)
+		{
+			draw_dead(row, col);
+			n = p + 1;
+			c = p;
+			while (*c++ = *n++); // shift things ahead backward
+			// delete the row if needed?
+		}
+	}*/
 }
 
-void draw_dead(uint8 row, uint8 col)
+void draw_dead(register uint8 row, register uint8 col)
 {
 	lcd_point(col << 1, row << 1, 6);
 	if (row == 0)
@@ -162,7 +226,6 @@ void init_system()
 	port1_init();
 	P4DIR |= 0x40;
 	__bis_SR_register(GIE);
-	FRAM_init();
 }
 
 void reset_simulation()
@@ -170,167 +233,121 @@ void reset_simulation()
 	WDT_Sec_Cnt = WDT_1SEC_CNT;
 	lcd_clear();
 	lcd_rectangle(0, 0, 160, 160, 1);
-}
-
-void gen_map()
-{
-	register int n, c;
-	register uint16 i = 1 << 9;
-	while (i --> 0)
-	{
-		for (n = 0, c = i; c; ++n, c &= c - 1); // count bits
-		if (bitmap_isalive(i))
-		{
-			if (n == 2 || n == 3)
-				bitmap_mapalive(i);
-			else
-				bitmap_mapdead(i);
-		}
-		else
-		{
-			if (n == 3)
-				bitmap_mapalive(i);
-			else
-				bitmap_mapdead(i);
-		}
-	}
+	thisgen = state1;
+	nextgen = state2;
+	*thisgen = 0;
+	switches = 0;
+	memset(state1, 0, sizeof(state1));
+	memset(state2, 0, sizeof(state2));
 }
 
 void init_simulation()
 {
-	// Write the data in universe to FRAM.
-	register int row = ROWS, colg;
-	register sbyte val;
-	thisgen = GEN1_START;
-	nextgen = GEN2_START;
-
-	while (row --> 0)
-	{
-		int empty = 1;
-		colg = 10;
-		write_mem(thisgen++, row);
-		while (colg --> 0)
-		{
-			register char i, n;
-			if (!(val = universe[row][colg]))
-				continue;
-			empty = 0;
-			for (i=1, n=0; i < 8; ++n, i <<= 1)
-				if (val & i)
-					write_mem(thisgen++, -(((colg + 1) << 3) - n));
-		}
-		if (empty) --thisgen;
-	}
-	write_mem(thisgen, 0);
-	thisgen = GEN1_START;
-
 	seconds = 0;
 	generation = 0;
 }
 
 void step_simulation()
 {
-	sbyte *cur = thisgen, *new = nextgen;
-	sbyte *prev, *next;
-	register sbyte cur_v, prev_v, next_v, new_v;
-	register uint16 bitmap = 0;
-	register sbyte x, y;
+	register sbyte *cur = thisgen, *new = nextgen;
+	register sbyte *prev, *next;
+	// a bitmap of everything around a cell, including itself.
+	register uint16 neighbors = 0;
+	// next x, current y
+	register sbyte nx, y;
 
-	cur_v = read_mem(cur);
 	prev = next = cur;
-	prev_v = next_v = cur_v;
 
-	new_v = 0;
-	write_mem(new, new_v);
+	*new = 0;
 
+	// Note this algorithm will go from y = max y to 0, and x = max x to 0.
 	do
 	{
 		// was an x coordinate written?
-		if (new_v < 0)
-			new_v = read_mem(++new);
+		if (*new < 0)
+			++new;
 
 		if (prev == next)
 		{
 			// start a new row group
-			if (next_v == 0)
-			{
-				write_mem(new, 0);
+			if (*next == 0)
 				break;
-			}
-			y = next_v + 1;
-			next_v = read_mem(++next);
+			y = *next++ + 1;
 		}
 		else
 		{
 			// move to next row and see which to scan
-			if (prev_v == y--)
-				prev_v = read_mem(++prev);
-			if (cur_v == y)
-				cur_v = read_mem(++cur);
-			if (next_v == y - 1)
-				next_v = read_mem(++next);
+			if (*prev == y--)
+				++prev;
+			if (*cur == y)
+				++cur;
+			if (*next == y - 1)
+				if (y - 1)
+					++next;
 		}
 
 		// write the new y coordinate
-		write_mem(new, y);
+		*new = y;
 		do
 		{
-			x = prev_v;
-			if (x > cur_v)
-				x = cur_v;
-			if (x > next_v)
-				x = next_v;
+			nx = *prev;
+			if (nx > *cur)
+				nx = *cur;
+			if (nx > *next)
+				nx = *next;
 
-			// end of the row?
-			if (x >= 0)
+			// any more x values to parse?
+			if (nx >= 0)
 				break;
+
+			neighbors = 0;
 
 			do
 			{
-				// add the next column to the bitmap
-				if (prev_v == x)
+				if (nx)
 				{
-					bitmap |= 0x40;
-					prev_v = read_mem(++prev);
-				}
-				if (cur_v == x)
-				{
-					bitmap |= 0x80;
-					cur_v = read_mem(++cur);
-				}
-				if (next_v == x)
-				{
-					bitmap |= 0x100;
-					next_v = read_mem(++next);
+					// add the next column to the neighbors bitmap
+					if (*next == nx)
+					{
+						neighbors |= 0x100;
+						++next;
+					}
+					if (*cur == nx)
+					{
+						neighbors |= 0x80;
+						++cur;
+					}
+					if (*prev == nx)
+					{
+						neighbors |= 0x40;
+						++prev;
+					}
 				}
 
-				if (bitmap_isalive(bitmap))
+				if (bitmap_isalive(neighbors))
 				{
-					if (bitmap_fate(bitmap))
+					if (bitmap_fate(neighbors))
 					{
-						write_mem(++new, x - 1);
-						new_v = x - 1;
+						*++new = nx - 1;
 					}
 					else
-						draw_dead(y, x);
+						draw_dead(y - 1, -nx); // using next x
 				}
-				else if (bitmap_fate(bitmap))
+				else if (bitmap_fate(neighbors))
 				{
-					draw_alive(y, x);
-					write_mem(++new, x - 1);
-					new_v = x - 1;
+					// can use next x because drawing starts from 0.
+					draw_alive(y - 1, -nx);
+					*++new = nx - 1;
 				}
-				else if (!bitmap)
+				else if (!neighbors) // possibly move neighbors check down
 					break;
-
-				bitmap >>= 3;
-				++x;
-
-			} while (1);
+				neighbors >>= 3;
+			} while (nx++);
 		} while (1);
 	} while (1);
-	lcd_cursor(0, 150);
-	lcd_printf("%04d", new - nextgen);
+
+	*new = 0; // terminate our list
+
 	next = thisgen;
 	thisgen = nextgen;
 	nextgen = next;
@@ -346,7 +363,6 @@ void main(void)
 		reset_simulation();
 		choose_simulation();
 		init_simulation();
-		P4OUT ^= 0x40;
 		do
 		{
 			step_simulation();
