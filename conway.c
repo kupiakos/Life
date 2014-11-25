@@ -337,14 +337,11 @@ void init_system()
 void reset_simulation()
 {
 	WDT_Sec_Cnt = WDT_1SEC_CNT;
-	lcd_clear();
-	lcd_rectangle(0, 0, 160, 160, 1);
-	lcd_cursor(65, 80);
-	lcd_printf("LIFE");
 	thisgen = state;
 	nextgen = state + GENSEP;
 	*thisgen = 0;
 	memset(state, 0, sizeof(state));
+	show_splash();
 }
 
 void init_simulation()

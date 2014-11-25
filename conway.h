@@ -40,6 +40,7 @@ THE SOFTWARE.
 #include "RBX430-1.h"
 #include "RBX430_lcd.h"
 #include "lifelib.h"
+#include "splash.h"
 
 #define sbyte signed char
 
