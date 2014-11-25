@@ -64,7 +64,8 @@ void draw_rle_pattern(register int row, register int col, register const uint8* 
 enum SEED { LIFE=0x01, BIRD=0x02, BOMB=0x04, MINE=0x08 };
 
 #define draw_alive(y, x) lcd_point(x << 1, y << 1, 7)
-void draw_dead(register uint8 row, register uint8 col);
+#define draw_dead(y, x) lcd_point(x << 1, y << 1, 6)
+// inline void draw_dead(register uint8 row, register uint8 col);
 
 #define write_mem(address, datum) FRAM_write((uint16)address, (uint8)datum);
 #define read_mem(address) (int8)FRAM_read((uint16)address);
