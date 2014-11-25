@@ -18,8 +18,8 @@
 
 #define sbyte signed char
 
-#define ROWS	80
-#define COLS	80
+#define ROWS	78
+#define COLS	78
 #define COLSECTS	10
 
 #define STATESIZE	880

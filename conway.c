@@ -155,7 +155,8 @@ void choose_simulation()
 			draw_rle_pattern(10, 66, by_flop);          // by_flop
 			break;
 		case MINE:
-			draw_rle_pattern(5, 5, glider);
+			draw_rle_pattern(20, 20, glider1);
+			draw_rle_pattern(20, 50, canada_goose);
 			break;
 		default:
 			switches = 0;
@@ -166,7 +167,6 @@ void choose_simulation()
 
 void cell_spawn(register uint8 row, register uint8 col)
 {
-	++row, ++col;
 	register sbyte *p;
 	// Find the correct group
 	for (p = thisgen; *p < 0 || *p > row; ++p);
@@ -204,7 +204,7 @@ void cell_spawn(register uint8 row, register uint8 col)
 			new2 = repl2;
 		} while (cont);
 	}
-	draw_alive(row - 1, col - 1);
+	draw_alive(row, col);
 }
 
 void cell_kill(register uint8 row, register uint8 col)
@@ -228,24 +228,27 @@ void cell_kill(register uint8 row, register uint8 col)
 	}*/
 }
 
+
 void draw_dead(register uint8 row, register uint8 col)
 {
 	lcd_point(col << 1, row << 1, 6);
-	if (row == 0)
-		lcd_rectangle(col << 1, 0, 2, 1, 1);
-	else if (row == ROWS - 1)
-		lcd_rectangle(col << 1, (ROWS << 1) - 1, 2, 1, 1);
-	if (col == 0)
-		lcd_rectangle(-1, row << 1, 1, 2, 1);
-	else if (col == COLS - 1)
-		lcd_rectangle((COLS << 1) - 1, row << 1, 1, 2, 1);
+	/*
+	if (row == 1)
+		lcd_rectangle((col << 1), 0, 4, 1, 1);
+	else if (row == ROWS - 2)
+		lcd_rectangle((col << 1), 159, 4, 1, 1);
+	if (col == 1)
+		lcd_rectangle(0, (row << 1), 1, 4, 1);
+	else if (col == COLS - 2)
+		lcd_rectangle(159, (row << 1), 1, 4, 1);*/
 }
+
 
 void init_system()
 {
 	RBX430_init(_16MHZ);
 	lcd_init();
-	lcd_volume(380);
+	lcd_volume(355);
 	lcd_backlight(1);
 	lcd_clear();
 	watchdog_init();
@@ -352,7 +355,7 @@ void step_simulation()
 					}
 				}
 
-				if (nx >= -(COLS+1))
+				if (nx >= -(COLS - 1) && y <= ROWS && y > 0)
 				{
 					if (bitmap_isalive(neighbors))
 					{
@@ -362,12 +365,11 @@ void step_simulation()
 							*new = nx - 1;
 						}
 						else
-							draw_dead(y - 1, -nx); // using next x
+							draw_dead(y, -(nx - 1)); // using next x
 					}
 					else if (bitmap_fate(neighbors))
 					{
-						// can use next x because drawing starts from 0.
-						draw_alive(y - 1, -nx);
+						draw_alive(y, -(nx - 1));
 						ip(new);
 						*new = nx - 1;
 					}
