@@ -728,7 +728,7 @@ uint8 lcd_bitImage(const uint8* image, int16 x, int16 y, uint8 flag)
 uint8 lcd_wordImage(const uint16* image, int16 x, int16 y, uint8 flag)
 {
 	int16 x1, reverse = 0;
-	int16 runCnt = 0;
+	uint16 runCnt = 0; // this NEEDS to be changed to uint16
 	uint16 runPixels;
 
 	int16 width = *image++;				// get width/height
