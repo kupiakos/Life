@@ -478,7 +478,7 @@ void main(void)
 		do
 		{
 			step_simulation();
-			// P4OUT ^= 0x40;
+			P4OUT ^= 0x40;
 		} while (!display_results(++generation));
 	}
 }
