@@ -11,8 +11,6 @@
 //******************************************************************************
 //******************************************************************************
 ///	Author:			Paul Roper, Brigham Young University
-///	                Modifications made by Kevin Haroldsen on 11/13/2014
-///
 //	Revision:		1.0		03/05/2012	RBX430-1
 //					1.1		06/01/2012	divu8, image1, image2
 //					1.2		09/17/2012	fill fixes
@@ -27,7 +25,6 @@
 //							11/19/2013	hex length limited to fieldSize
 //					1.6					lcd_rectange uses int
 //					1.7		08/06/2014	lcd_init initializes ports 2-4
-//  ==== MODIFICATIONS MADE BY KEVIN HAROLDSEN ====
 //
 //	Description:	Controller firmware for YM160160C/ST7529 LCD
 //
@@ -728,7 +725,7 @@ uint8 lcd_bitImage(const uint8* image, int16 x, int16 y, uint8 flag)
 uint8 lcd_wordImage(const uint16* image, int16 x, int16 y, uint8 flag)
 {
 	int16 x1, reverse = 0;
-	uint16 runCnt = 0; // this NEEDS to be changed to uint16
+	uint16 runCnt = 0; 					// modified by Kevin Haroldsen to match the spec
 	uint16 runPixels;
 
 	int16 width = *image++;				// get width/height
@@ -1146,7 +1143,7 @@ const unsigned char cs[][5] = {
   { 0x10,0x10,0x7c,0x10,0x10 },  // +  --O-- --O-- OOOOO OOOOO ----- OOOOO ----- --O--
   { 0x06,0x07,0x00,0x00,0x00 },  // ,  --O-- --O-- -OOO- --O-- ----- ----- ----- -O---
   { 0x10,0x10,0x10,0x10,0x10 },  // -  --O-- --O-- -O-O- --O-- -OO-- ----- -OO-- O----
-  { 0x00,0x06,0x06,0x00,0x00 },  // .  ---O- -O--- ----- ----- -OO-- ----- -OO-- -----
+  { 0x06,0x06,0x00,0x00,0x00 },  // .  ---O- -O--- ----- ----- -OO-- ----- -OO-- -----
   { 0x04,0x08,0x10,0x20,0x40 },  // /  ----- ----- ----- ----- --O-- ----- ----- -----
 //
 //{ 0x42,0xfe,0x02,0x00,0x00 },  // 1
@@ -1212,14 +1209,14 @@ const unsigned char cs[][5] = {
   { 0x1c,0x2a,0x2a,0x2a,0x10 },  // e  ----- O---O O---O O---O O---O O---- -O--- -OOOO
   { 0x10,0x7e,0x90,0x90,0x80 },  // f  ----- -OOOO OOOO- -OOO- -OOOO -OOO- -O--- ----O
   { 0x18,0x25,0x25,0x25,0x3e },  // g  ----- ----- ----- ----- ----- ----- ----- -OOO-
-// fixed the i and l for better "kerning"
-  { 0xfe,0x10,0x10,0x10,0x0e },  // h  O---- --O-- ----O O---- --O-- ----- ----- -----
-  { 0x00,0xbe,0x02,0x00,0x00 },  // i  O---- ----- ----- O---- --O-- ----- ----- -----
-  { 0x02,0x01,0x01,0x21,0xbe },  // j  O---- --O-- ---OO O--O- --O-- OO-O- OOOO- -OOO-
-  { 0xfe,0x08,0x14,0x22,0x00 },  // k  OOOO- --O-- ----O O-O-- --O-- O-O-O O---O O---O
-  { 0x00,0x00,0xfe,0x02,0x00 },  // l  O---O --O-- ----O OO--- --O-- O-O-O O---O O---O
-  { 0x3e,0x20,0x18,0x20,0x1e },  // m  O---O --O-- ----O O-O-- --O-- O---O O---O O---O
-  { 0x3e,0x20,0x20,0x20,0x1e },  // n  O---O --OO- O---O O--O- --OO- O---O O---O -OOO-
+//
+  { 0xfe,0x10,0x10,0x10,0x0e },  // h  O---- -O--- ----O O---- O---- ----- ----- -----
+  { 0xbe,0x02,0x00,0x00,0x00 },  // i  O---- ----- ----- O---- O---- ----- ----- -----
+  { 0x02,0x01,0x01,0x21,0xbe },  // j  O---- -O--- ---OO O--O- O---- OO-O- OOOO- -OOO-
+  { 0xfe,0x08,0x14,0x22,0x00 },  // k  OOOO- -O--- ----O O-O-- O---- O-O-O O---O O---O
+  { 0xfe,0x02,0x00,0x00,0x00 },  // l  O---O -O--- ----O OO--- O---- O-O-O O---O O---O
+  { 0x3e,0x20,0x18,0x20,0x1e },  // m  O---O -O--- ----O O-O-- O---- O---O O---O O---O
+  { 0x3e,0x20,0x20,0x20,0x1e },  // n  O---O -OO-- O---O O--O- OO--- O---O O---O -OOO-
   { 0x1c,0x22,0x22,0x22,0x1c },  // o  ----- ----- -OOO- ----- ----- ----- ----- -----
 //
   { 0x3f,0x22,0x22,0x22,0x1c },  // p  ----- ----- ----- ----- ----- ----- ----- -----
@@ -1450,14 +1447,10 @@ static int my_printfi(unsigned char (*outc)(unsigned char), char* fmt, char* arg
 //			uint8 padChar = '0';			// width: pad character
 			uint8 padChar = ' ';			// width: pad character
 			int8 hexCase = 0;				// hexadecimal: 0 = upper, 1 = lower
-			int rightJustify = 1;			// Whether to right-justify or not.
 			while (1)
 			{
 				switch (c = *fmt++)
 				{
-					case '-':				// left justification modifier
-						rightJustify = 0;
-						continue;
 					case'0':				// pad w/zeros modifier
 						padChar = '0';
 						continue;
@@ -1486,20 +1479,14 @@ static int my_printfi(unsigned char (*outc)(unsigned char), char* fmt, char* arg
 					case 's':				// string
 					{
 						char* _ptr = va_arg(arg_ptr, char*);
-						if (rightJustify)
-							while (strlen(_ptr) < fieldSize--) (*outc)(' ');
+						while (strlen(_ptr) < fieldSize--) (*outc)(' ');
 						while (*_ptr) (*outc)(*_ptr++);
-						if (!rightJustify)
-							while (strlen(_ptr) < fieldSize--) (*outc)(' ');
 						break;
 					}
 
 					case 'c':				// char
-						if (rightJustify)
-							while (1 < fieldSize--) (*outc)(padChar);	// pad char??
+						while (1 < fieldSize--) (*outc)(padChar);	// pad char??
 						(*outc)(va_arg(arg_ptr, char));
-						if (!rightJustify)
-							while (1 < fieldSize--) (*outc)(padChar);	// pad char??
 						break;
 
 					case 'd':				// 16-bit integer
@@ -1516,11 +1503,8 @@ static int my_printfi(unsigned char (*outc)(unsigned char), char* fmt, char* arg
 
 						if (n == 0)
 						{
-							if (rightJustify)
-								while (1 <= --fieldSize) (*outc)(padChar);
+							while (1 <= --fieldSize) (*outc)(padChar);
 							(*outc)('0');
-							if (!rightJustify)
-								while (1 <= --fieldSize) (*outc)(padChar);
 						}
 						else
 						{
@@ -1529,8 +1513,7 @@ static int my_printfi(unsigned char (*outc)(unsigned char), char* fmt, char* arg
 
 							// reduce size by # of digits & output padding (if any)
 							while ((unsigned long)n < *dp) ++dp, --size;
-							if (rightJustify)
-								while (size <= --fieldSize) (*outc)(padChar);
+							while (size <= --fieldSize) (*outc)(padChar);
 
 							nn = (unsigned long)n;				// output #
 							do									// output decimal #
@@ -1540,8 +1523,6 @@ static int my_printfi(unsigned char (*outc)(unsigned char), char* fmt, char* arg
 								while (nn >= d) ++c, nn -= d;	// get digit
 								(*outc)(c);						// output digit
 							} while (!(d & 1));					// repeat until 1
-							if (!rightJustify)
-								while (size <= --fieldSize) (*outc)(padChar);
 						}
 						break;
 					}
@@ -1561,21 +1542,15 @@ static int my_printfi(unsigned char (*outc)(unsigned char), char* fmt, char* arg
 					{
 						unsigned long d = (unsigned long)(length > 4 ? va_arg(arg_ptr, long) : va_arg(arg_ptr, int));
 
-						if (fieldSize && (length > fieldSize) && rightJustify && padChar == '0')
-							length = fieldSize;
+						if (fieldSize && (length > fieldSize)) length = fieldSize;
+						else
 
-						int16 len2 = length;
-						if (rightJustify)
-							while (len2 < fieldSize--) (*outc)(padChar);
-
+						while (length < fieldSize--) (*outc)(padChar);
 						do
 						{
 							c = (unsigned char)(d >> (--length << 2)) & 0x0f;
 							(*outc)(hexCase ? lHexChar[c] : uHexChar[c]);
 						} while (length);
-
-						if (!rightJustify)
-							while (len2 < fieldSize--) (*outc)(padChar);
 						break;
 					}
 
