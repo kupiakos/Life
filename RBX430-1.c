@@ -11,6 +11,8 @@
 //
 //	Author:			Paul Roper, Brigham Young University
 //	Revision:		1.0		02/15/2012
+//					1.1		11/25/2012	ERROR2 blinks error #
+//					1.2		03/22/2013	Removed USCI isr vector
 //
 //	Description:	Initialization firmware for RBX430-1 Rev D Development Board
 //
@@ -122,42 +124,23 @@ void ERROR2(int16 error)
 {
 	int i, j;
 
-	// return if no error
-	if (error == 0) return;
+	if (error == 0) return;			// return if no error
 
 	__bic_SR_register(GIE);			// disable interrupts
 	RBX430_init(_1MHZ);				// system reset @1 MHz
 
 	while (1)
 	{
-		// pause
-		LED_RED_OFF;
 		BACKLIGHT_OFF;
-		for (i=1; i<4; i++) for (j=1; j; j++);
-
-		// flash LED's 10 times
-		i = 10;
-		while (i--)
-		{
-			LED_RED_TOGGLE;
-			BACKLIGHT_TOGGLE;
-			for (j=1; j<8000; j++);
-		}
-
-		// pause
-		LED_RED_OFF;
-		BACKLIGHT_OFF;
-		for (i=1; i<2; i++) for (j=1; j; j++);
+		for (i = 5; i > 0; --i) for (j = -1; j; --j) LED_RED_OFF;
 
 		// now blink error #
-		for (i = 0; i < error; i++)
+		for (i = error; i > 0; --i)
 		{
 			BACKLIGHT_ON;
-			LED_RED_ON;
-			for (j=1; j; j++);
-			LED_RED_OFF;
+			for (j = 0x7fff; j; --j) LED_RED_ON;
 			BACKLIGHT_OFF;
-			for (j=1; j; j++);
+			for (j = 0x7fff; j; --j) LED_RED_OFF;
 		}
 	}
 } // end ERROR2
@@ -184,56 +167,67 @@ uint8 ADC_init(void)
 //		REFON		Reference on
 //		REF2_5V		2.5v internal reference
 //
+//		channel 6  = right potentiometer
+//		channel 7  = left potentiometer
 //		channel 10 = internal temperature
-//		channel 12 = left potentiometer
-//		channel 13 = right potentiometer
-//		channel 15 = thermistor
-//
-//		| 15  14  13| 12  11| 10| 9 | 8 | 7 | 6 | 5 | 4 | 3 | 2 | 1 | 0 |
-//		  0   0   0   1   1   0   0   0   0   0   0   0   0   0   0   0
+//		channel 15 = red LED
 //
 uint16 ADC_read(uint8 channel)
 {
 	int result, timeout;
 
 	ADC10CTL0 = SREF0 | ADC10SHT_2 | ADC10ON | REFON | REF2_5V;
-	if (channel == MSP430_TEMPERATURE)
+	switch (channel)
 	{
-		// internal temperature
+		case RIGHT_POT:
+		{
+			// P3.6 -> Right Potentiometer
+			P3DIR &= ~0x40;					// A6 = P3.6
+			P3SEL |= 0x40;
+			ADC10AE0 = 0x40;
+			ADC10AE1 = 0x00;				// P3.6 ADC10 function and enable
+			break;
+		}
 
-		// delay 30 us to allow Ref to settle
-		timeout = 30*8;
-		while (--timeout);
+		case LEFT_POT:
+		{
+			// P3.7 -> Left Potentiometer
+			P3DIR &= ~0x80;					// A7 - P3.7
+			P3SEL |= 0x80;
+			ADC10AE0 = 0x80;
+			ADC10AE1 = 0x00;				// P3.7 ADC10 function and enable
+			break;
+		}
+
+		case RED_LED:
+		{
+			// P4.6 -> Red LED
+			P4DIR &= ~0x40;					// A15 = P4.6
+			P4SEL |= 0x40;
+			ADC10AE0 = 0x00;
+			ADC10AE1 = 0x80;				// P4.6 ADC10 function and enable
+			break;
+		}
+
+		case MSP430_TEMPERATURE:
+		{
+			// internal temperature, delay 30 us to allow Ref to settle
+			for (timeout = 30*8; timeout;) --timeout;
+			break;
+		}
+
+		case MSP430_VOLTAGE:
+		{
+			// (Vcc - Vss) / 2
+			break;
+		}
 	}
 
-	if (channel == RIGHT_POT)
-	{
-		// P3.6 -> Right Potentiometer
-		P3DIR &= ~0x40;					// A6 = P3.6
-		P3SEL |= 0x40;
-		ADC10AE0 = 0x40;
-		ADC10AE1 = 0x00;				// P3.6 ADC10 function and enable
-	}
-	else if (channel == LEFT_POT)
-	{
-		// P3.7 -> Left Potentiometer
-		P3DIR &= ~0x80;					// A7 - P3.7
-		P3SEL |= 0x80;
-		ADC10AE0 = 0x80;
-		ADC10AE1 = 0x00;				// P3.7 ADC10 function and enable
-	}
-	else if (channel == RED_LED)
-	{
-		// P4.6 -> Red LED
-		P4DIR &= ~0x40;					// A15 = P4.6
-		P4SEL |= 0x40;
-		ADC10AE0 = 0x00;
-		ADC10AE1 = 0x80;				// P4.6 ADC10 function and enable
-	}
 	ADC10CTL1 = channel << 12;
 	ADC10CTL0 |= ENC | ADC10SC;			// Sampling and conversion start
 	timeout = 1;
-	while (!(ADC10CTL0 & ADC10IFG) && ++timeout);
+//	while (!(ADC10CTL0 & ADC10IFG) && ++timeout);
+	while (++timeout) if (ADC10CTL0 & ADC10IFG) break;
 	if (timeout == 0) ERROR2(SYS_ERR_ADC_TO);
 	result = ADC10MEM;
 	if (result < 0) result = 0;
@@ -255,16 +249,4 @@ __interrupt void ADC10_ISR(void)
 {
   __bic_SR_register_on_exit(CPUOFF);		// Clear CPUOFF bit from 0(SR)
   return;
-}
-
-
-//******************************************************************************
-//	USCI interrupt service routine
-//
-#pragma vector = USCIAB0RX_VECTOR
-__interrupt void USCIAB0RX_ISR(void)
-{
-	// should not come here!!!!!!!
-	ERROR2(SYS_ERR_USCB_RX);
-	return;
 }

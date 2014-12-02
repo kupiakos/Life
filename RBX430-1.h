@@ -3,13 +3,20 @@
 //
 //	Author:			Paul Roper
 //	Revision:		1.0		01/01/2012	RBX430-1 boards
+//					1.1		11/08/2012	_430clock renumbered
+//					1.2		04/15/2013	SYS_ERROR. SYS_ERRORS
+//
 //******************************************************************************
 #ifndef RBX430_H_
 #define RBX430_H_
 
 #define REV_D	1
 
-enum _430clock {_16MHZ, _12MHZ, _8MHZ, _1MHZ};
+enum _430clock {_1MHZ, _8MHZ, _12MHZ, _16MHZ};
+#define _1MHZx		0
+#define _8MHZx		1
+#define _12MHZx		2
+#define _16MHZx		3
 
 #define I2C_FSCL	100							// ~100kHz
 //#define I2C_FSCL	200							// ~200kHz
@@ -17,9 +24,9 @@ enum _430clock {_16MHZ, _12MHZ, _8MHZ, _1MHZ};
 
 //******************************************************************************
 //	data types
-typedef char int8;
-typedef int int16;
-typedef long int32;
+typedef signed char int8;
+typedef signed int int16;
+typedef signed long int32;
 
 typedef unsigned char uint8;
 typedef unsigned int uint16;
@@ -32,18 +39,22 @@ typedef unsigned long uint32;
 #define FALSE			0
 
 //	system errors
-enum SYS_ERRORS {	SYS_ERR_430init=1,		// 1 eZ430X initialize
-					SYS_ERR_PRINT,			// 2 lprintf line too long
-					SYS_ERR_LCD,			// 3 lcd not responding
-					SYS_ERR_ADC,			// 4 adc
-					SYS_ERR_FRAM,			// 5 FRAM
-					SYS_ERR_XL345,			// 6 accelerometer
-					SYS_ERR_USCB_RX,		// 7 USCB receive timeout
-					SYS_ERR_I2C_TO,			// 8 i2c timeout
-					SYS_ERR_I2C_ACK,		// 9 i2c ACK timeout
-					SYS_ERR_ADC_TO,			// 10 adc timeout
-					SYS_ERR_XL345_TO,		// 11 accelerometer timeout
-					SYS_ERR_XL345ID
+enum SYS_ERRORS {	SYS_ERR_430init=1,		// 1  init error
+					SYS_ERR_PRINT,			// 2  printf line too long
+					SYS_ERR_LCD,			// 3  lcd error
+					SYS_ERR_ADC,			// 4  adc error
+					SYS_ERR_FRAM,			// 5  FRAM error
+					SYS_ERR_XL345,			// 6  accelerometer error
+					SYS_ERR_USCB_RX,		// 7  USCI timeout
+					SYS_ERR_I2C_TO,			// 8  i2c timeout
+					SYS_ERR_I2C_ACK,		// 9  i2c ACK timeout
+					SYS_ERR_ISR,			// 10 un-initialized interrupt
+					SYS_ERR_MALLOC,			// 11 malloc error
+					SYS_ERR_EVENT,			// 12 event error
+
+					SYS_ERR_ADC_TO,			// 13 adc timeout
+					SYS_ERR_XL345_TO,		// 14 accelerometer timeout
+					SYS_ERR_XL345ID			// 15 accelerometer ID error
 				};
 
 //******************************************************************************
@@ -116,7 +127,7 @@ enum SYS_ERRORS {	SYS_ERR_430init=1,		// 1 eZ430X initialize
 //******************************************************************************
 //	LCD
 //
-#define	LCD_BL_H			P4OUT |= BK_LGT;
+#define LCD_BL_H			P4OUT |= BK_LGT;
 #define LCD_BL_L			P4OUT &= ~BK_LGT;
 
 #define LCD_A0_H			P3OUT |= LCD_A0;
@@ -138,8 +149,8 @@ enum SYS_ERRORS {	SYS_ERR_430init=1,		// 1 eZ430X initialize
 //
 uint8 RBX430_init(enum _430clock clock);
 void ERROR2(int16 error);
+void SYS_ERROR(enum SYS_ERRORS);
 void wait(uint16 time);
-
 
 //******************************************************************************
 //	ADC Prototypes
@@ -147,14 +158,11 @@ void wait(uint16 time);
 #define RIGHT_POT			6
 #define LEFT_POT			7
 #define MSP430_TEMPERATURE	10
+#define MSP430_VOLTAGE		11
 #define RED_LED				15
 
 uint8 ADC_init(void);
 uint16 ADC_read(uint8 channel);
-
-//#define FILTER_SHIFT 4			// Parameter K
-//uint16 lowpass_filter(uint16 input, uint16* delay);
-
 
 //******************************************************************************
 #endif /*RBX430_H_*/
