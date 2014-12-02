@@ -324,6 +324,7 @@ void init_system()
 {
 	RBX430_init(_16MHZ);
 	lcd_init();
+	lcd_volume(355);
 	lcd_volume(358);
 	lcd_backlight(1);
 	lcd_clear();
