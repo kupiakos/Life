@@ -32,6 +32,22 @@ THE SOFTWARE.
 
 #include "splash.h"
 
+extern const uint16 twilight[];
+extern const uint16 title[];
+
+
+void show_splash()
+{
+	lcd_clear();
+	lcd_wordImage(twilight, 0, 0, 1);
+	lcd_rectangle(0, 0, 160, 160, 1);
+	lcd_wordImage(title, 6, 125, 1);
+	lcd_cursor(90, 16);
+	lcd_printf("It's magic!");
+	lcd_rectangle(75, 20, 11, 1, 7);
+}
+
+
 // Excited Twilight Sparkle, 120x120, facing right.
 const uint16 twilight[] = {120, 120,
 		0x08ff,0x1040,0x0000,0x9303,0xe696,0x02f0,0xef5d,0xe75d,0xa5da,
@@ -454,16 +470,4 @@ const uint16 title[] = {147, 23,
 		0xdd87,0x04de,0x14ff,0x7800,0xffde,0x0011,0x11ff,0x1000,0x0001,
 		0x2bff
 };
-
-
-void show_splash()
-{
-	lcd_clear();
-	lcd_wordImage(twilight, 0, 0, 1);
-	lcd_rectangle(0, 0, 160, 160, 1);
-	lcd_wordImage(title, 6, 125, 1);
-	lcd_cursor(90, 16);
-	lcd_printf("It's magic!");
-	lcd_rectangle(75, 20, 11, 1, 7);
-}
 
