@@ -40,6 +40,8 @@ THE SOFTWARE.
 #include "life.h"
 
 // Each state is as large as I can make it. (Tested by experimentation)
+// Note that if the universe becomes too full, this will fail and we'll either
+// crash or experience the strangest of bugs.
 sbyte state[STATESIZE];
 
 // Used to be highly compressed; 8 states per byte.
@@ -232,7 +234,7 @@ void choose_simulation()
 			draw_rle_pattern(11, 29, glider);           // blows bird apart
 			draw_rle_pattern(65, 65, loafer);
 
-			for (i = 2; i < 78; i += 3)                 // draw ground
+			for (i = 2; i <= 78; i += 3)                 // draw ground
 			{
 			   draw_rle_pattern(7, i, block);           // block
 			}
